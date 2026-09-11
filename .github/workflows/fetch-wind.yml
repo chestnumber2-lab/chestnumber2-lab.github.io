@@ -31,9 +31,13 @@ jobs:
       - name: Fetch and convert GFS data
         run: |
           mkdir -p public/data/weather/current
-          NOW=$(date -u +%Y%m%d)
-          HOUR=$(( ($(date -u +%H) / 6) * 6 ))
+
+          TS=$(date -u -d '5 hours ago' +%s)
+          NOW=$(date -u -d @$TS +%Y%m%d)
+          RAWHOUR=$(date -u -d @$TS +%H)
+          HOUR=$(( (10#$RAWHOUR / 6) * 6 ))
           CYC=$(printf "%02d" $HOUR)
+          echo "Using GFS cycle: $NOW ${CYC}Z"
 
           declare -A LEVELS=(
             [surface]="lev_10_m_above_ground=on"
@@ -47,7 +51,16 @@ jobs:
           for name in "${!LEVELS[@]}"; do
             LEV="${LEVELS[$name]}"
             URL="https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs.pl?file=gfs.t${CYC}z.pgrb2.1p00.f000&${LEV}&var_UGRD=on&var_VGRD=on&dir=%2Fgfs.${NOW}%2F${CYC}%2Fatmos"
-            curl -s -o gfs_${name}.grb2 "$URL"
+            echo "Fetching $name ..."
+            if ! curl -sf -o gfs_${name}.grb2 "$URL"; then
+              echo "WARNING: download failed for $name, skipping"
+              continue
+            fi
+            SIZE=$(stat -c%s gfs_${name}.grb2)
+            if [ "$SIZE" -lt 1000 ]; then
+              echo "WARNING: $name file too small ($SIZE bytes), likely invalid, skipping"
+              continue
+            fi
             java -cp "tools/grib2json.jar:tools/lib/*" net.nullschool.grib2json.Launcher -d -n -o public/data/weather/current/current-wind-${name}-gfs-1.0.json gfs_${name}.grb2
             rm gfs_${name}.grb2
           done
