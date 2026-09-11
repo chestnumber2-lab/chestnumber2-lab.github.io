@@ -1,3 +1,4 @@
+cat > .github/workflows/fetch-wind.yml << 'EOF'
 name: Fetch wind data and deploy
 
 on:
@@ -48,7 +49,8 @@ jobs:
             LEV="${LEVELS[$name]}"
             URL="https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs.pl?file=gfs.t${CYC}z.pgrb2.1p00.f000&${LEV}&var_UGRD=on&var_VGRD=on&dir=%2Fgfs.${NOW}%2F${CYC}%2Fatmos"
             curl -s -o gfs_${name}.grb2 "$URL"
-            java -cp "tools/grib2json.jar:tools/lib/*" net.nullschool.grib2json.Launcher -d -n -o public/data/weather/current/current-wind-${name}-gfs-1.0.json gfs_${name}.grb2            rm gfs_${name}.grb2
+            java -cp "tools/grib2json.jar:tools/lib/*" net.nullschool.grib2json.Launcher -d -n -o public/data/weather/current/current-wind-${name}-gfs-1.0.json gfs_${name}.grb2
+            rm gfs_${name}.grb2
           done
 
       - name: Commit updated data
@@ -66,4 +68,4 @@ jobs:
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
-
+EOF
