@@ -1,4 +1,3 @@
-cat > .github/workflows/fetch-wind.yml << 'EOF'
 name: Fetch wind data and deploy
 
 on:
