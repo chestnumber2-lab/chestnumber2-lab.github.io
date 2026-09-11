@@ -1,0 +1,36 @@
+name: Build grib2json jar (one-time)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Clone and build grib2json
+        run: |
+          git clone https://github.com/cambecc/grib2json.git
+          cd grib2json
+          mvn package
+
+      - name: Copy jar into repo
+        run: |
+          mkdir -p tools
+          cp grib2json/target/grib2json-*.jar tools/grib2json.jar
+
+      - name: Commit jar
+        run: |
+          git config user.name "wind-data-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add tools/grib2json.jar
+          git commit -m "Add prebuilt grib2json jar"
+          git push
+
