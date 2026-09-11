@@ -1,0 +1,70 @@
+name: Fetch wind data and deploy
+
+on:
+  schedule:
+    - cron: '30 4,10,16,22 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  fetch-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Fetch and convert GFS data
+        run: |
+          mkdir -p public/data/weather/current
+          NOW=$(date -u +%Y%m%d)
+          HOUR=$(( ($(date -u +%H) / 6) * 6 ))
+          CYC=$(printf "%02d" $HOUR)
+
+          declare -A LEVELS=(
+            [surface]="lev_10_m_above_ground=on"
+            [1000hPa]="lev_1000_mb=on"
+            [850hPa]="lev_850_mb=on"
+            [700hPa]="lev_700_mb=on"
+            [500hPa]="lev_500_mb=on"
+            [250hPa]="lev_250_mb=on"
+          )
+
+          for name in "${!LEVELS[@]}"; do
+            LEV="${LEVELS[$name]}"
+            URL="https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs.pl?file=gfs.t${CYC}z.pgrb2.1p00.f000&${LEV}&var_UGRD=on&var_VGRD=on&dir=%2Fgfs.${NOW}%2F${CYC}%2Fatmos"
+            curl -s -o gfs_${name}.grb2 "$URL"
+            java -jar tools/grib2json.jar -d -n -o public/data/weather/current/current-wind-${name}-gfs-1.0.json gfs_${name}.grb2
+            rm gfs_${name}.grb2
+          done
+
+      - name: Commit updated data
+        run: |
+          git config user.name "wind-data-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add public/data/weather/current/*.json
+          git commit -m "Update GFS wind data $(date -u)" || echo "No changes to commit"
+          git push || echo "Nothing to push"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
+
