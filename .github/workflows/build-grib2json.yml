@@ -2,8 +2,10 @@ name: Build grib2json jar (one-time)
 
 on:
   workflow_dispatch:
+
 permissions:
   contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,17 +23,18 @@ jobs:
           git clone https://github.com/cambecc/grib2json.git
           cd grib2json
           mvn package
+          mvn dependency:copy-dependencies -DoutputDirectory=target/lib
 
-      - name: Copy jar into repo
+      - name: Copy jar and dependencies into repo
         run: |
-          mkdir -p tools
+          mkdir -p tools/lib
           cp grib2json/target/grib2json-*.jar tools/grib2json.jar
+          cp grib2json/target/lib/*.jar tools/lib/
 
-      - name: Commit jar
+      - name: Commit jar and dependencies
         run: |
           git config user.name "wind-data-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add tools/grib2json.jar
-          git commit -m "Add prebuilt grib2json jar"
+          git add tools/grib2json.jar tools/lib
+          git commit -m "Add prebuilt grib2json jar with dependencies"
           git push
-
