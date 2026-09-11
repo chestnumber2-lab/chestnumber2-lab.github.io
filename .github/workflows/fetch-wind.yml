@@ -50,7 +50,7 @@ jobs:
 
           for name in "${!LEVELS[@]}"; do
             LEV="${LEVELS[$name]}"
-            URL="https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs.pl?file=gfs.t${CYC}z.pgrb2.1p00.f000&${LEV}&var_UGRD=on&var_VGRD=on&dir=%2Fgfs.${NOW}%2F${CYC}%2Fatmos"
+            URL="https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_1p00.pl?file=gfs.t${CYC}z.pgrb2.1p00.f000&${LEV}&var_UGRD=on&var_VGRD=on&dir=%2Fgfs.${NOW}%2F${CYC}%2Fatmos"
             echo "Fetching $name ..."
             if ! curl -sf -o gfs_${name}.grb2 "$URL"; then
               echo "WARNING: download failed for $name, skipping"
